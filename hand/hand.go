@@ -58,18 +58,21 @@ const (
 // Kicker may be default value, not all hands have kickers.
 // May need more complex expression of RankValue for two pair matchups
 // where both players have the same top pair
+// Value contains tie breaking logic.
 type Value struct {
 	Rank      RANK
 	Kicker    card.RANK
 	RankValue card.RANK
+	Hand      Hand
 }
 
 // NewHandValue creates a new Value
-func NewHandValue(rank RANK, kicker card.RANK, rankValue card.RANK) *Value {
+func NewHandValue(rank RANK, kicker card.RANK, rankValue card.RANK, hand Hand) *Value {
 	return &Value{
 		Rank:      rank,
 		Kicker:    kicker,
 		RankValue: rankValue,
+		Hand:      hand,
 	}
 }
 
@@ -85,16 +88,29 @@ func FormHand(h Hand) (*Value, error) {
 		return v, fmt.Errorf("Argument to FormHand should be hand of %d cards, not %d cards",
 			numHoleCards+numCommCards, len(h))
 	}
+	// Straight
 	hasStraight, straightHigh, isFlush := straight(h)
 	if hasStraight {
 		straightVal := Straight
 		if isFlush {
+			// Straight flush
 			straightVal = StraightFlush
+			// Royal Flush
 			if straightHigh == card.Ace {
 				straightVal = RoyalFlush
 			}
 		}
-		return NewHandValue(straightVal, card.Nil, straightHigh), nil
+		return NewHandValue(straightVal, card.Nil, straightHigh, h), nil
+	}
+
+	// Four of a kind
+
+	// Full house
+
+	// Flush
+	hasFlush := flush(h)
+	if hasFlush {
+		return NewHandValue(Flush, card.Nil, card.Nil, h), nil
 	}
 
 	return v, nil
@@ -129,13 +145,13 @@ func numSuited(h Hand) (card.SUIT, int) {
 }
 
 func rmDupsOfOtherSuits(h Hand, s card.SUIT) Hand {
-	dups := make( map[card.RANK]bool)
+	dups := make(map[card.RANK]bool)
 
 	favSuit := make(map[card.RANK]bool)
 	for _, v := range h {
 		if v.Suit == s {
-		favSuit[v.Rank] = true
-	}
+			favSuit[v.Rank] = true
+		}
 	}
 
 	for _, v := range h {
@@ -204,5 +220,9 @@ func straight(h Hand) (bool, card.RANK, bool) {
 	h = append(Hand{last}, h...)
 	hasStraight, highest, isFlush = findStraight(h)
 	return hasStraight, highest, isFlush
+}
 
+func flush(h Hand) bool {
+	_, count := numSuited(h)
+	return count == sizeHand
 }

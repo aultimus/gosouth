@@ -73,7 +73,7 @@ func TestStraight(t *testing.T) {
 		card.New(card.Eight, card.Hearts),
 		card.New(card.Nine, card.Spades),
 	}
-	b, r,f = straight(h)
+	b, r, f = straight(h)
 	a.True(b)
 	a.False(f)
 	a.Equal(card.King, r)
@@ -87,7 +87,36 @@ func TestStraight(t *testing.T) {
 		card.New(card.Queen, card.Diamonds),
 		card.New(card.Eight, card.Diamonds),
 	}
-	b, r,f  = straight(h)
+	b, r, f = straight(h)
 	a.False(b)
 	a.Equal(card.Nil, r)
+
+	// TODO: Check a hand of < 5 cards
+}
+
+func TestFlush(t *testing.T) {
+	a := assert.New(t)
+	h := Hand{
+		card.New(card.Four, card.Clubs),
+		card.New(card.Two, card.Clubs),
+		card.New(card.King, card.Clubs),
+		card.New(card.Jack, card.Hearts),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.Queen, card.Spades),
+		card.New(card.Eight, card.Clubs),
+	}
+	f := flush(h)
+	a.True(f)
+
+	h = Hand{
+		card.New(card.Four, card.Spades),
+		card.New(card.Ace, card.Spades),
+		card.New(card.King, card.Hearts),
+		card.New(card.Jack, card.Hearts),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.Queen, card.Spades),
+		card.New(card.Eight, card.Clubs),
+	}
+	f = flush(h)
+	a.False(f)
 }
