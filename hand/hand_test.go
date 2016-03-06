@@ -1,12 +1,16 @@
 package hand
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/aultimus/gosouth/card"
 	"github.com/stretchr/testify/assert"
 )
+
+// TODO: test against a db of poker hands?
+// csv?
 
 // TODO: Test Sorting
 
@@ -92,6 +96,42 @@ func TestStraight(t *testing.T) {
 	a.Equal(card.Nil, r)
 
 	// TODO: Check a hand of < 5 cards
+}
+
+func TestStraightTieBreak(t *testing.T) {
+	a := assert.New(t)
+	holeHand1 := Hand{
+		card.New(card.Jack, card.Hearts),
+		card.New(card.King, card.Hearts),
+	}
+
+	holeHand2 := Hand{
+		card.New(card.Six, card.Hearts),
+		card.New(card.Nine, card.Spades),
+	}
+	commCards := Hand{
+		card.New(card.Ten, card.Hearts),
+		card.New(card.Nine, card.Hearts),
+		card.New(card.Eight, card.Hearts),
+		card.New(card.Seven, card.Hearts),
+		card.New(card.Ace, card.Spades),
+	}
+	h1 := append(holeHand1, commCards...)
+	h2 := append(holeHand2, commCards...)
+
+	hasStraight, rankValue1, _ := straight(h1)
+	a.True(hasStraight, fmt.Sprintf("%s does not have a straight?", h1))
+
+	hasStraight, rankValue2, _ := straight(h2)
+	a.True(hasStraight, fmt.Sprintf("%s does not have a straight?", h2))
+
+	// TODO: This code is duplicated
+	v1 := NewHandValue(Straight, card.Nil, rankValue1, h1)
+	v2 := NewHandValue(Straight, card.Nil, rankValue2, h2)
+
+	outcome, err := straightTieBreak(v1, v2)
+	a.NoError(err)
+	a.Equal(H2Win, outcome)
 }
 
 func TestFlush(t *testing.T) {

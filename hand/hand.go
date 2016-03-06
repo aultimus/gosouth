@@ -61,8 +61,8 @@ const (
 // Value contains tie breaking logic.
 type Value struct {
 	Rank      RANK
-	Kicker    card.RANK
 	RankValue card.RANK
+	Kicker    card.RANK
 	Hand      Hand
 }
 
@@ -70,10 +70,15 @@ type Value struct {
 func NewHandValue(rank RANK, kicker card.RANK, rankValue card.RANK, hand Hand) *Value {
 	return &Value{
 		Rank:      rank,
-		Kicker:    kicker,
 		RankValue: rankValue,
+		Kicker:    kicker,
 		Hand:      hand,
 	}
+}
+
+func (v Value) String() string {
+	return fmt.Sprintf("rank:%d, rank value:%s kicker:%s, hand:%s",
+		v.Rank, v.RankValue, v.Kicker, v.Hand)
 }
 
 func (h Hand) Len() int           { return len(h) }
@@ -119,6 +124,38 @@ func FormHand(h Hand) (*Value, error) {
 // Showdown determines whether h1 wins,
 // h2 wins or if they draw
 func Showdown(h1, h2 Hand) OUTCOME {
+	v1, err := FormHand(h1)
+	if err != nil {
+		panic(err)
+	}
+	v2, err := FormHand(h2)
+	if err != nil {
+		panic(err)
+	}
+	if v1.Rank > v2.Rank {
+		return H1Win
+	} else if v2.Rank > v1.Rank {
+		return H2Win
+	}
+	// Both have the same hand value
+	// Handle tie breaking hand comparison
+	// Royal Flush
+	if v1.Rank == RoyalFlush &&
+		v2.Rank == RoyalFlush {
+		panic(fmt.Errorf("both %s and %s are royal flushes!?? Impossible", v1, v2))
+	}
+
+	// Straight & Straight Flush
+	if v1.Rank == StraightFlush && v1.Rank == v2.Rank {
+		outcome, err := straightTieBreak(v1, v2)
+		if err != nil {
+			panic(err)
+		}
+		return outcome
+	}
+
+	// Flush - TODO
+
 	// TODO
 	return Draw
 }
@@ -220,6 +257,21 @@ func straight(h Hand) (bool, card.RANK, bool) {
 	h = append(Hand{last}, h...)
 	hasStraight, highest, isFlush = findStraight(h)
 	return hasStraight, highest, isFlush
+}
+
+func straightTieBreak(v1, v2 *Value) (OUTCOME, error) {
+	fmt.Println(Straight)
+	if v1.Rank != Straight && v1.Rank != StraightFlush ||
+		v2.Rank != Straight && v2.Rank != StraightFlush {
+		return Draw, fmt.Errorf("one of %s, %s is not a straight or a straight flush", v1, v2)
+	}
+	if v1.RankValue > v2.RankValue {
+		return H1Win, nil
+	} else if v2.RankValue > v1.RankValue {
+		return H2Win, nil
+	} else {
+		return Draw, nil // Is this even possible?
+	}
 }
 
 func flush(h Hand) bool {
