@@ -97,7 +97,6 @@ func FormHand(h Hand) (*Value, error) {
 	// TODO - straight isnt higher than four of a kind
 	hasStraight, straightHigh, isFlush := straight(h)
 	if hasStraight {
-		straightVal := Straight
 		if isFlush {
 			// Straight flush
 			straightVal = StraightFlush
@@ -105,8 +104,8 @@ func FormHand(h Hand) (*Value, error) {
 			if straightHigh == card.Ace {
 				straightVal = RoyalFlush
 			}
+			return NewHandValue(straightVal, card.Nil, straightHigh, h), nil
 		}
-		return NewHandValue(straightVal, card.Nil, straightHigh, h), nil
 	}
 
 	// Four of a kind
@@ -122,7 +121,9 @@ func FormHand(h Hand) (*Value, error) {
 		return NewHandValue(Flush, card.Nil, card.Nil, h), nil
 	}
 
-	// Straight - TODO - move here
+	if hasStraight {
+		return NewHandValue(Straight, card.Nil, straightHigh, h), nil
+	}
 
 	// Three of a kind
 	hasThree, kicker, rankValue := xOfAKind(h, 3)
