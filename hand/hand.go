@@ -305,28 +305,35 @@ func flush(h Hand) bool {
 	return count == sizeHand
 }
 
-func xOfAKind(h Hand, x int) (bool, card.RANK, card.RANK) {
+// rankFreqMap returns a map of rank to frequency
+// for the given hand.
+func rankFreqMap(h Hand) map[card.RANK]int {
 	rankMap := make(map[card.RANK]int)
-	var rank card.RANK
 	for _, v := range h {
 		rankMap[v.Rank]++
-		if rankMap[v.Rank] > rankMap[rank] ||
-			rankMap[v.Rank] == rankMap[rank] &&
-				card.RankIndexes[v.Rank] > card.RankIndexes[rank] {
-			rank = v.Rank
+	}
+	return rankMap
+}
+
+func xOfAKind(h Hand, x int) (bool, card.RANK, card.RANK) {
+	rankMap := rankFreqMap(h)
+	topRank := card.Nil
+	for r := range rankMap {
+		if rankMap[r] > rankMap[topRank] ||
+			rankMap[r] == rankMap[topRank] &&
+				card.RankIndexes[r] > card.RankIndexes[topRank] {
+			topRank = r
 		}
 	}
 	// should we handle 4 of a kind case when arg is 3?
-	if rankMap[rank] != x {
+	if rankMap[topRank] != x {
 		return false, card.Nil, card.Nil
 	}
-
 	kicker := card.Nil
 	for _, c := range h {
-		if card.RankIndexes[c.Rank] > card.RankIndexes[kicker] && c.Rank != rank {
+		if card.RankIndexes[c.Rank] > card.RankIndexes[kicker] && c.Rank != topRank {
 			kicker = c.Rank
 		}
 	}
-
-	return true, kicker, rank
+	return true, kicker, topRank
 }
