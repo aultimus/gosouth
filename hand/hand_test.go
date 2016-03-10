@@ -160,3 +160,89 @@ func TestFlush(t *testing.T) {
 	f = flush(h)
 	a.False(f)
 }
+
+func TestFourOfAKind(t *testing.T) {
+	a := assert.New(t)
+	h := Hand{
+		card.New(card.Jack, card.Diamonds),
+		card.New(card.Jack, card.Spades),
+		card.New(card.King, card.Clubs),
+		card.New(card.Jack, card.Hearts),
+		card.New(card.Four, card.Clubs),
+		card.New(card.Three, card.Spades),
+		card.New(card.Jack, card.Clubs),
+	}
+	b, k, v := xOfAKind(h, 4)
+	a.Equal(card.King, k)
+	a.Equal(card.Jack, v)
+	a.True(b)
+
+	h = Hand{
+		card.New(card.Four, card.Spades),
+		card.New(card.Ace, card.Spades),
+		card.New(card.Queen, card.Hearts),
+		card.New(card.Jack, card.Hearts),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.Queen, card.Spades),
+		card.New(card.Eight, card.Clubs),
+	}
+	b, _, _ = xOfAKind(h, 4)
+	a.False(b)
+}
+
+func TestThreeOfAKind(t *testing.T) {
+	a := assert.New(t)
+	h := Hand{
+		card.New(card.Jack, card.Diamonds),
+		card.New(card.Jack, card.Spades),
+		card.New(card.King, card.Clubs),
+		card.New(card.Jack, card.Hearts),
+		card.New(card.Four, card.Clubs),
+		card.New(card.Three, card.Spades),
+		card.New(card.Ace, card.Clubs),
+	}
+	b, k, v := xOfAKind(h, 3)
+	a.True(b)
+	a.Equal(card.Ace, k)
+	a.Equal(card.Jack, v)
+
+	h = Hand{
+		card.New(card.Four, card.Spades),
+		card.New(card.Ace, card.Spades),
+		card.New(card.King, card.Hearts),
+		card.New(card.Jack, card.Hearts),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.Queen, card.Spades),
+		card.New(card.Eight, card.Clubs),
+	}
+	b, _, _ = xOfAKind(h, 3)
+	a.False(b)
+
+	h = Hand{
+		card.New(card.Ace, card.Spades),
+		card.New(card.King, card.Spades),
+		card.New(card.Ace, card.Hearts),
+		card.New(card.King, card.Hearts),
+		card.New(card.King, card.Clubs),
+		card.New(card.Ace, card.Clubs),
+		card.New(card.Two, card.Diamonds),
+	}
+	b, k, v = xOfAKind(h, 3)
+	a.True(b)
+	a.Equal(card.King, k)
+	a.Equal(card.Ace, v)
+
+	h = Hand{
+		card.New(card.Queen, card.Spades),
+		card.New(card.King, card.Spades),
+		card.New(card.Queen, card.Hearts),
+		card.New(card.King, card.Hearts),
+		card.New(card.King, card.Clubs),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.Ace, card.Diamonds),
+	}
+	b, k, v = xOfAKind(h, 3)
+	a.True(b)
+	a.Equal(card.Ace, k)
+	a.Equal(card.King, v)
+}

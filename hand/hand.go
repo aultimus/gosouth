@@ -94,6 +94,7 @@ func FormHand(h Hand) (*Value, error) {
 			numHoleCards+numCommCards, len(h))
 	}
 	// Straight
+	// TODO - straight isnt higher than four of a kind
 	hasStraight, straightHigh, isFlush := straight(h)
 	if hasStraight {
 		straightVal := Straight
@@ -109,7 +110,10 @@ func FormHand(h Hand) (*Value, error) {
 	}
 
 	// Four of a kind
-
+	hasFour, kicker, rankValue := xOfAKind(h, 4)
+	if hasFour {
+		return NewHandValue(FourOfAKind, kicker, rankValue, h), nil
+	}
 	// Full house
 
 	// Flush
@@ -118,6 +122,13 @@ func FormHand(h Hand) (*Value, error) {
 		return NewHandValue(Flush, card.Nil, card.Nil, h), nil
 	}
 
+	// Straight - TODO - move here
+
+	// Three of a kind
+	hasThree, kicker, rankValue := xOfAKind(h, 3)
+	if hasThree {
+		return NewHandValue(ThreeOfAKind, kicker, rankValue, h), nil
+	}
 	return v, nil
 }
 
@@ -137,16 +148,16 @@ func Showdown(h1, h2 Hand) OUTCOME {
 	} else if v2.Rank > v1.Rank {
 		return H2Win
 	}
+	// Ordering of hand type checks from here on doesnt matter,
 	// Both have the same hand value
 	// Handle tie breaking hand comparison
 	// Royal Flush
-	if v1.Rank == RoyalFlush &&
-		v2.Rank == RoyalFlush {
+	if ofSameRank(v1, v2, RoyalFlush) {
 		panic(fmt.Errorf("both %s and %s are royal flushes!?? Impossible", v1, v2))
 	}
 
 	// Straight & Straight Flush
-	if v1.Rank == StraightFlush && v1.Rank == v2.Rank {
+	if ofSameRank(v1, v2, StraightFlush) {
 		outcome, err := straightTieBreak(v1, v2)
 		if err != nil {
 			panic(err)
@@ -156,8 +167,23 @@ func Showdown(h1, h2 Hand) OUTCOME {
 
 	// Flush - TODO
 
+	// Four of a kind
+	if ofSameRank(v1, v2, FourOfAKind) {
+		// TODO
+		//outcome, err := FourOfAKindTieBreak(v1, v2)
+		//if err != nil {
+		//	panic(err)
+		//}
+	}
+
 	// TODO
 	return Draw
+}
+
+// ofSameRank returns true if the two given hand
+// Values match the rank r
+func ofSameRank(v1, v2 *Value, r RANK) bool {
+	return v1.Rank == r && v2.Rank == r
 }
 
 func numSuited(h Hand) (card.SUIT, int) {
@@ -260,9 +286,8 @@ func straight(h Hand) (bool, card.RANK, bool) {
 }
 
 func straightTieBreak(v1, v2 *Value) (OUTCOME, error) {
-	fmt.Println(Straight)
-	if v1.Rank != Straight && v1.Rank != StraightFlush ||
-		v2.Rank != Straight && v2.Rank != StraightFlush {
+	if !ofSameRank(v1, v2, StraightFlush) ||
+		!ofSameRank(v1, v2, Straight) {
 		return Draw, fmt.Errorf("one of %s, %s is not a straight or a straight flush", v1, v2)
 	}
 	if v1.RankValue > v2.RankValue {
@@ -277,4 +302,30 @@ func straightTieBreak(v1, v2 *Value) (OUTCOME, error) {
 func flush(h Hand) bool {
 	_, count := numSuited(h)
 	return count == sizeHand
+}
+
+func xOfAKind(h Hand, x int) (bool, card.RANK, card.RANK) {
+	rankMap := make(map[card.RANK]int)
+	var rank card.RANK
+	for _, v := range h {
+		rankMap[v.Rank]++
+		if rankMap[v.Rank] > rankMap[rank] ||
+			rankMap[v.Rank] == rankMap[rank] &&
+				card.RankIndexes[v.Rank] > card.RankIndexes[rank] {
+			rank = v.Rank
+		}
+	}
+	// should we handle 4 of a kind case when arg is 3?
+	if rankMap[rank] != x {
+		return false, card.Nil, card.Nil
+	}
+
+	kicker := card.Nil
+	for _, c := range h {
+		if card.RankIndexes[c.Rank] > card.RankIndexes[kicker] && c.Rank != rank {
+			kicker = c.Rank
+		}
+	}
+
+	return true, kicker, rank
 }
