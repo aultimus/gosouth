@@ -99,7 +99,7 @@ func FormHand(h Hand) (*Value, error) {
 	if hasStraight {
 		if isFlush {
 			// Straight flush
-			straightVal = StraightFlush
+			straightVal := StraightFlush
 			// Royal Flush
 			if straightHigh == card.Ace {
 				straightVal = RoyalFlush
