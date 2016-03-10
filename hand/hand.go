@@ -287,7 +287,7 @@ func straight(h Hand) (bool, card.RANK, bool) {
 }
 
 func straightTieBreak(v1, v2 *Value) (OUTCOME, error) {
-	if !ofSameRank(v1, v2, StraightFlush) ||
+	if !ofSameRank(v1, v2, StraightFlush) &&
 		!ofSameRank(v1, v2, Straight) {
 		return Draw, fmt.Errorf("one of %s, %s is not a straight or a straight flush", v1, v2)
 	}
