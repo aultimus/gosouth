@@ -54,6 +54,7 @@ func TestRmDupsOfOtherSuits(t *testing.T) {
 func TestStraight(t *testing.T) {
 	a := assert.New(t)
 
+	// Test wheel straight flush
 	h := Hand{
 		card.New(card.Ace, card.Clubs),
 		card.New(card.Two, card.Clubs),
@@ -63,10 +64,26 @@ func TestStraight(t *testing.T) {
 		card.New(card.Two, card.Diamonds),
 		card.New(card.Nine, card.Diamonds),
 	}
-	b, r, f := straight(h)
+	b, f, formedHand := straight(h)
 	a.True(b)
 	a.True(f)
-	a.Equal(card.Five, r)
+	a.Equal(card.New(card.Five, card.Clubs), formedHand[sizeHand-1])
+
+	// Test for straight flush when theres a flush
+	// and a straight but no straight flush
+	h = Hand{
+		card.New(card.Ace, card.Clubs),
+		card.New(card.Two, card.Clubs),
+		card.New(card.Three, card.Hearts),
+		card.New(card.Four, card.Hearts),
+		card.New(card.Five, card.Clubs),
+		card.New(card.Jack, card.Diamonds),
+		card.New(card.Nine, card.Clubs),
+	}
+	b, f, formedHand = straight(h)
+	a.True(b)
+	a.False(f)
+	a.Equal(card.New(card.Five, card.Clubs), formedHand[sizeHand-1])
 
 	h = Hand{
 		card.New(card.Ten, card.Hearts),
@@ -77,10 +94,10 @@ func TestStraight(t *testing.T) {
 		card.New(card.Eight, card.Hearts),
 		card.New(card.Nine, card.Spades),
 	}
-	b, r, f = straight(h)
+	b, f, formedHand = straight(h)
 	a.True(b)
 	a.False(f)
-	a.Equal(card.King, r)
+	a.Equal(card.New(card.King, card.Spades), formedHand[sizeHand-1])
 
 	h = Hand{
 		card.New(card.Ten, card.Clubs),
@@ -91,9 +108,8 @@ func TestStraight(t *testing.T) {
 		card.New(card.Queen, card.Diamonds),
 		card.New(card.Eight, card.Diamonds),
 	}
-	b, r, f = straight(h)
+	b, f, formedHand = straight(h)
 	a.False(b)
-	a.Equal(card.Nil, r)
 
 	// TODO: Check a hand of < 5 cards
 }
@@ -119,23 +135,26 @@ func TestStraightTieBreak(t *testing.T) {
 	h1 := append(holeHand1, commCards...)
 	h2 := append(holeHand2, commCards...)
 
-	hasStraight, rankValue1, _ := straight(h1)
+	hasStraight, hasFlush, formedHand1 := straight(h1)
 	a.True(hasStraight, fmt.Sprintf("%s does not have a straight?", h1))
+	a.True(hasFlush)
+	a.Equal(card.New(card.Jack, card.Hearts), formedHand1[sizeHand-1])
 
-	hasStraight, rankValue2, _ := straight(h2)
+	hasStraight, hasFlush, formedHand2 := straight(h2)
 	a.True(hasStraight, fmt.Sprintf("%s does not have a straight?", h2))
+	a.True(hasFlush)
+	a.Equal(card.New(card.Ten, card.Hearts), formedHand2[sizeHand-1])
 
-	// TODO: This code is duplicated
-	v1 := NewHandValue(Straight, card.Nil, rankValue1, h1)
-	v2 := NewHandValue(Straight, card.Nil, rankValue2, h2)
+	v1 := NewHandValue(StraightFlush, formedHand1)
+	v2 := NewHandValue(StraightFlush, formedHand2)
 
-	outcome, err := straightTieBreak(v1, v2)
-	a.NoError(err)
-	a.Equal(H2Win, outcome)
+	outcome := tieBreak(v1, v2)
+	a.Equal(H1Win, outcome)
 }
 
 func TestFlush(t *testing.T) {
 	a := assert.New(t)
+	// basic test
 	h := Hand{
 		card.New(card.Four, card.Clubs),
 		card.New(card.Two, card.Clubs),
@@ -145,8 +164,35 @@ func TestFlush(t *testing.T) {
 		card.New(card.Queen, card.Spades),
 		card.New(card.Eight, card.Clubs),
 	}
-	f := flush(h)
+	f, h := flush(h)
 	a.True(f)
+	a.True(reflect.DeepEqual(Hand{
+		card.New(card.Two, card.Clubs),
+		card.New(card.Four, card.Clubs),
+		card.New(card.Eight, card.Clubs),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.King, card.Clubs),
+	}, h))
+
+	// test with 6 of the same suit
+	h = Hand{
+		card.New(card.Four, card.Clubs),
+		card.New(card.Three, card.Clubs),
+		card.New(card.King, card.Clubs),
+		card.New(card.Ace, card.Clubs),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.Queen, card.Spades),
+		card.New(card.Eight, card.Clubs),
+	}
+	f, h = flush(h)
+	a.True(f)
+	a.True(reflect.DeepEqual(Hand{
+		card.New(card.Four, card.Clubs),
+		card.New(card.Eight, card.Clubs),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.King, card.Clubs),
+		card.New(card.Ace, card.Clubs),
+	}, h))
 
 	h = Hand{
 		card.New(card.Four, card.Spades),
@@ -157,7 +203,7 @@ func TestFlush(t *testing.T) {
 		card.New(card.Queen, card.Spades),
 		card.New(card.Eight, card.Clubs),
 	}
-	f = flush(h)
+	f, h = flush(h)
 	a.False(f)
 }
 
@@ -172,10 +218,10 @@ func TestFourOfAKind(t *testing.T) {
 		card.New(card.Three, card.Spades),
 		card.New(card.Jack, card.Clubs),
 	}
-	b, k, v := xOfAKind(h, 4)
-	a.Equal(card.King, k)
-	a.Equal(card.Jack, v)
+	b, h := xOfAKind(h, 4)
 	a.True(b)
+	a.Equal(card.New(card.King, card.Clubs), h[sizeHand-1])
+	a.Equal(card.Jack, h[0].Rank)
 
 	h = Hand{
 		card.New(card.Four, card.Spades),
@@ -186,7 +232,7 @@ func TestFourOfAKind(t *testing.T) {
 		card.New(card.Queen, card.Spades),
 		card.New(card.Eight, card.Clubs),
 	}
-	b, _, _ = xOfAKind(h, 4)
+	b, _ = xOfAKind(h, 4)
 	a.False(b)
 }
 
@@ -201,10 +247,11 @@ func TestThreeOfAKind(t *testing.T) {
 		card.New(card.Three, card.Spades),
 		card.New(card.Ace, card.Clubs),
 	}
-	b, k, v := xOfAKind(h, 3)
+	b, h := xOfAKind(h, 3)
 	a.True(b)
-	a.Equal(card.Ace, k)
-	a.Equal(card.Jack, v)
+	a.Equal(card.Jack, h[0].Rank)                           // rank of the set
+	a.Equal(card.New(card.Ace, card.Clubs), h[sizeHand-2])  // first kicker
+	a.Equal(card.New(card.King, card.Clubs), h[sizeHand-1]) // second kicker
 
 	h = Hand{
 		card.New(card.Four, card.Spades),
@@ -215,7 +262,7 @@ func TestThreeOfAKind(t *testing.T) {
 		card.New(card.Queen, card.Spades),
 		card.New(card.Eight, card.Clubs),
 	}
-	b, _, _ = xOfAKind(h, 3)
+	b, _ = xOfAKind(h, 3)
 	a.False(b)
 
 	h = Hand{
@@ -227,10 +274,11 @@ func TestThreeOfAKind(t *testing.T) {
 		card.New(card.Ace, card.Clubs),
 		card.New(card.Two, card.Diamonds),
 	}
-	b, k, v = xOfAKind(h, 3)
+	b, h = xOfAKind(h, 3)
 	a.True(b)
-	a.Equal(card.King, k)
-	a.Equal(card.Ace, v)
+	a.Equal(card.Ace, h[0].Rank)           // rank of the set
+	a.Equal(card.King, h[sizeHand-2].Rank) // first kicker
+	a.Equal(card.King, h[sizeHand-1].Rank) // second kicker
 
 	h = Hand{
 		card.New(card.Queen, card.Spades),
@@ -241,8 +289,32 @@ func TestThreeOfAKind(t *testing.T) {
 		card.New(card.Queen, card.Clubs),
 		card.New(card.Ace, card.Diamonds),
 	}
-	b, k, v = xOfAKind(h, 3)
+	b, h = xOfAKind(h, 3)
 	a.True(b)
-	a.Equal(card.Ace, k)
-	a.Equal(card.King, v)
+	a.Equal(card.King, h[0].Rank)           // rank of the set
+	a.Equal(card.Ace, h[sizeHand-2].Rank)   // first kicker
+	a.Equal(card.Queen, h[sizeHand-1].Rank) // second kicker
+}
+
+func TestPopKicker(t *testing.T) {
+	a := assert.New(t)
+
+	h := Hand{
+		card.New(card.Queen, card.Spades),
+		card.New(card.King, card.Spades),
+		card.New(card.Queen, card.Hearts),
+		card.New(card.King, card.Hearts),
+		card.New(card.King, card.Clubs),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.Ace, card.Diamonds),
+	}
+	f, k := popKicker(h)
+	a.Equal(card.New(card.Ace, card.Diamonds), k)
+	a.True(reflect.DeepEqual(f, Hand{card.New(card.Queen, card.Spades),
+		card.New(card.King, card.Spades),
+		card.New(card.Queen, card.Hearts),
+		card.New(card.King, card.Hearts),
+		card.New(card.King, card.Clubs),
+		card.New(card.Queen, card.Clubs),
+	}))
 }

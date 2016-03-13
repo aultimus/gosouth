@@ -102,3 +102,5 @@ func knuthShuffle(a Deck) Deck {
 	}
 	return a
 }
+
+// TODO: Is converting between a hand and a deck costly?

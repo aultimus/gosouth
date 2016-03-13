@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/aultimus/gosouth/card"
+	"github.com/aultimus/gosouth/deck"
 )
 
 // Hand represents a collection of cards
@@ -56,29 +57,40 @@ const (
 // Value encapsulates a showdown hand
 // and is used to compare showdown hands.
 // Kicker may be default value, not all hands have kickers.
-// May need more complex expression of RankValue for two pair matchups
-// where both players have the same top pair
 // Value contains tie breaking logic.
 type Value struct {
-	Rank      RANK
-	RankValue card.RANK
-	Kicker    card.RANK
-	Hand      Hand
+	Rank RANK
+	Hand Hand
 }
 
 // NewHandValue creates a new Value
-func NewHandValue(rank RANK, kicker card.RANK, rankValue card.RANK, hand Hand) *Value {
+func NewHandValue(rank RANK, hand Hand) *Value {
 	return &Value{
-		Rank:      rank,
-		RankValue: rankValue,
-		Kicker:    kicker,
-		Hand:      hand,
+		Rank: rank,
+		Hand: hand,
 	}
 }
 
+func tieBreak(v1, v2 *Value) OUTCOME {
+	if v1.Rank != v2.Rank {
+		panic(fmt.Errorf("%s & %s are not of same rank", v1, v2))
+	}
+	// assuming hand is sorted correctly by detection function
+	for i := range v1.Hand {
+		r1 := card.RankIndexes[v1.Hand[i].Rank]
+		r2 := card.RankIndexes[v2.Hand[i].Rank]
+		if r1 > r2 {
+			return H1Win
+		} else if r2 > r1 {
+			return H2Win
+		}
+	}
+	return Draw
+}
+
 func (v Value) String() string {
-	return fmt.Sprintf("rank:%d, rank value:%s kicker:%s, hand:%s",
-		v.Rank, v.RankValue, v.Kicker, v.Hand)
+	return fmt.Sprintf("rank:%d, hand:%s",
+		v.Rank, v.Hand)
 }
 
 func (h Hand) Len() int           { return len(h) }
@@ -94,42 +106,42 @@ func FormHand(h Hand) (*Value, error) {
 			numHoleCards+numCommCards, len(h))
 	}
 	// Straight
-	// TODO - straight isnt higher than four of a kind
-	hasStraight, straightHigh, isFlush := straight(h)
+	hasStraight, isFlush, formedHand := straight(h)
 	if hasStraight {
 		if isFlush {
 			// Straight flush
 			straightVal := StraightFlush
 			// Royal Flush
-			if straightHigh == card.Ace {
+			if formedHand[sizeHand-1].Rank == card.Ace {
 				straightVal = RoyalFlush
 			}
-			return NewHandValue(straightVal, card.Nil, straightHigh, h), nil
+			return NewHandValue(straightVal, formedHand), nil
 		}
 	}
 
 	// Four of a kind
-	hasFour, kicker, rankValue := xOfAKind(h, 4)
+	hasFour, formedHand := xOfAKind(h, 4)
 	if hasFour {
-		return NewHandValue(FourOfAKind, kicker, rankValue, h), nil
+		return NewHandValue(FourOfAKind, formedHand), nil
 	}
 	// Full house
 
 	// Flush
-	hasFlush := flush(h)
+	hasFlush, formedHand := flush(h)
 	if hasFlush {
-		return NewHandValue(Flush, card.Nil, card.Nil, h), nil
+		return NewHandValue(Flush, formedHand), nil
 	}
 
 	if hasStraight {
-		return NewHandValue(Straight, card.Nil, straightHigh, h), nil
+		return NewHandValue(Straight, formedHand), nil
 	}
 
 	// Three of a kind
-	hasThree, kicker, rankValue := xOfAKind(h, 3)
+	hasThree, formedHand := xOfAKind(h, 3)
 	if hasThree {
-		return NewHandValue(ThreeOfAKind, kicker, rankValue, h), nil
+		return NewHandValue(ThreeOfAKind, formedHand), nil
 	}
+
 	return v, nil
 }
 
@@ -149,42 +161,7 @@ func Showdown(h1, h2 Hand) OUTCOME {
 	} else if v2.Rank > v1.Rank {
 		return H2Win
 	}
-	// Ordering of hand type checks from here on doesnt matter,
-	// Both have the same hand value
-	// Handle tie breaking hand comparison
-	// Royal Flush
-	if ofSameRank(v1, v2, RoyalFlush) {
-		panic(fmt.Errorf("both %s and %s are royal flushes!?? Impossible", v1, v2))
-	}
-
-	// Straight & Straight Flush
-	if ofSameRank(v1, v2, StraightFlush) {
-		outcome, err := straightTieBreak(v1, v2)
-		if err != nil {
-			panic(err)
-		}
-		return outcome
-	}
-
-	// Flush - TODO
-
-	// Four of a kind
-	if ofSameRank(v1, v2, FourOfAKind) {
-		// TODO
-		//outcome, err := FourOfAKindTieBreak(v1, v2)
-		//if err != nil {
-		//	panic(err)
-		//}
-	}
-
-	// TODO
-	return Draw
-}
-
-// ofSameRank returns true if the two given hand
-// Values match the rank r
-func ofSameRank(v1, v2 *Value, r RANK) bool {
-	return v1.Rank == r && v2.Rank == r
+	return tieBreak(v1, v2)
 }
 
 func numSuited(h Hand) (card.SUIT, int) {
@@ -233,43 +210,45 @@ func rmDupsOfOtherSuits(h Hand, s card.SUIT) Hand {
 	return cleaned
 }
 
-func findStraight(h Hand) (bool, card.RANK, bool) {
+func findStraight(h Hand) (bool, bool, Hand) {
 	var c int
-	var highest card.RANK
+	var formedHand Hand
 	for i := len(h) - 1; i > 0; i-- {
 		current := h[i]
 		next := h[i-1]
 		if current.Connected(next) {
 			if c == 0 {
-				highest = current.Rank
+				formedHand = Hand{current}
 			}
+			formedHand = append(Hand{next}, formedHand...)
 			c++
 			if c == sizeHand-1 {
-				_, suitedCount := numSuited(h)
+				_, suitedCount := numSuited(formedHand)
 				isFlush := suitedCount == sizeHand
-				return true, highest, isFlush
+				return true, isFlush, formedHand
 			}
 		} else {
 			c = 0
 		}
 	}
-	return false, card.RANK(""), false
+	return false, false, formedHand
 }
 
 // straight returns a bool, representing whether a straight exists
 // and if so, the highest value of a straight in the given hand
-func straight(h Hand) (bool, card.RANK, bool) {
+func straight(h Hand) (bool, bool, Hand) {
+	var formedHand Hand
 	// remove duplicates of rank not of the most populous suit
 	s, _ := numSuited(h)
 	h = rmDupsOfOtherSuits(h, s)
 	if len(h) < sizeHand {
-		return false, card.RANK(""), false
+		return false, false, formedHand
 	}
 	// sort cards into order and check for straight
 	sort.Sort(h)
-	hasStraight, highest, isFlush := findStraight(h)
+	hasStraight, isFlush, formedHand := findStraight(h)
 	if hasStraight {
-		return hasStraight, highest, isFlush
+		return hasStraight, isFlush, formedHand
 	}
 	// Make ace low if exists and check for wheel
 	lastI := len(h) - 1
@@ -277,32 +256,32 @@ func straight(h Hand) (bool, card.RANK, bool) {
 
 	// No Ace means no straight
 	if last.Rank != card.Ace {
-		return false, card.RANK(""), false
+		return false, false, formedHand
 	}
-
 	h = append(h[:lastI])
 	h = append(Hand{last}, h...)
-	hasStraight, highest, isFlush = findStraight(h)
-	return hasStraight, highest, isFlush
+	return findStraight(h)
 }
 
-func straightTieBreak(v1, v2 *Value) (OUTCOME, error) {
-	if !ofSameRank(v1, v2, StraightFlush) &&
-		!ofSameRank(v1, v2, Straight) {
-		return Draw, fmt.Errorf("one of %s, %s is not a straight or a straight flush", v1, v2)
+// flush returns true if a flush is present and
+//  the five highest cards of that suit
+func flush(h Hand) (bool, Hand) {
+	// TODO: Sort cards and return sorted hand
+	s, count := numSuited(h)
+	if count < sizeHand {
+		return false, h
 	}
-	if v1.RankValue > v2.RankValue {
-		return H1Win, nil
-	} else if v2.RankValue > v1.RankValue {
-		return H2Win, nil
-	} else {
-		return Draw, nil // Is this even possible?
-	}
-}
 
-func flush(h Hand) bool {
-	_, count := numSuited(h)
-	return count == sizeHand
+	var f Hand
+	for _, c := range h {
+		if c.Suit == s {
+			f = append(f, c)
+		}
+	}
+	// sort hand
+	sort.Sort(f)
+	// take last 5
+	return true, f[len(f)-sizeHand:]
 }
 
 // rankFreqMap returns a map of rank to frequency
@@ -315,25 +294,66 @@ func rankFreqMap(h Hand) map[card.RANK]int {
 	return rankMap
 }
 
-func xOfAKind(h Hand, x int) (bool, card.RANK, card.RANK) {
+func xOfAKind(h Hand, x int) (bool, Hand) {
+	// TODO: sort cards and return sorted hand
 	rankMap := rankFreqMap(h)
 	topRank := card.Nil
-	for r := range rankMap {
-		if rankMap[r] > rankMap[topRank] ||
-			rankMap[r] == rankMap[topRank] &&
+	for r, c := range rankMap {
+		if c > rankMap[topRank] ||
+			c == rankMap[topRank] &&
 				card.RankIndexes[r] > card.RankIndexes[topRank] {
 			topRank = r
 		}
 	}
+
 	// should we handle 4 of a kind case when arg is 3?
 	if rankMap[topRank] != x {
-		return false, card.Nil, card.Nil
+		return false, h
 	}
-	kicker := card.Nil
+	var f Hand
+	var temp Hand
 	for _, c := range h {
-		if card.RankIndexes[c.Rank] > card.RankIndexes[kicker] && c.Rank != topRank {
-			kicker = c.Rank
+		if c.Rank == topRank {
+			f = append(f, c) // add to new hand
+		} else {
+			temp = append(temp, c)
 		}
 	}
-	return true, kicker, topRank
+	h = temp
+
+	// add kickers to new hand
+	numKickers := sizeHand - x
+	var k *card.Card
+	for i := 0; i < numKickers; i++ {
+		h, k = popKicker(h)
+		f = append(f, k)
+	}
+
+	return true, f
+}
+
+// popKicker returns the highest ranked
+// card in a given hand and returns the hand
+// with the card removed.
+func popKicker(h Hand) (Hand, *card.Card) {
+	var topCard *card.Card
+	var topInd int
+	for i, c := range h {
+		if i == 0 || card.RankIndexes[c.Rank] > card.RankIndexes[topCard.Rank] {
+			topCard = c
+			topInd = i
+		}
+	}
+	return append(h[:topInd], h[topInd+1:]...), topCard
+}
+
+// Remove removes a card from the given hand
+func Remove(h Hand, c *card.Card) Hand {
+	d := deck.Deck(h)
+	d, err := deck.Remove(d, c)
+	h = Hand(d)
+	if err != nil {
+		panic(err)
+	}
+	return h
 }
