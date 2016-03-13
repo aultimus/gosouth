@@ -394,3 +394,35 @@ func TestTwoPair(t *testing.T) {
 	b, f = twoPair(h)
 	a.False(b)
 }
+
+func TestOnePair(t *testing.T) {
+	a := assert.New(t)
+	h := Hand{
+		card.New(card.Queen, card.Spades),
+		card.New(card.King, card.Spades),
+		card.New(card.Queen, card.Hearts),
+		card.New(card.Three, card.Hearts),
+		card.New(card.Seven, card.Clubs),
+		card.New(card.Two, card.Clubs),
+		card.New(card.Ace, card.Diamonds),
+	}
+	b, f := onePair(h)
+	a.True(b)
+	a.Equal(card.Queen, f[0].Rank)
+	a.Equal(card.Queen, f[1].Rank)
+	a.Equal(card.Ace, f[2].Rank)
+	a.Equal(card.King, f[3].Rank)
+	a.Equal(card.Seven, f[4].Rank)
+
+	h = Hand{
+		card.New(card.Nine, card.Spades),
+		card.New(card.King, card.Spades),
+		card.New(card.Ace, card.Hearts),
+		card.New(card.Two, card.Hearts),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.Five, card.Clubs),
+		card.New(card.Seven, card.Diamonds),
+	}
+	b, f = onePair(h)
+	a.False(b)
+}

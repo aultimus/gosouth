@@ -154,7 +154,15 @@ func FormHand(h Hand) (*Value, error) {
 		return NewHandValue(TwoPair, formedHand), nil
 	}
 
-	return v, nil
+	// Pair
+	hasOnePair, formedHand := onePair(h)
+	if hasOnePair {
+		return NewHandValue(OnePair, formedHand), nil
+	}
+
+	// TODO: High card
+
+	return v, fmt.Errorf("No valid hand !??! in %s", h)
 }
 
 // Showdown determines whether h1 wins,
@@ -381,6 +389,19 @@ func twoPair(h Hand) (bool, Hand) {
 	_, k := popKicker(h)
 
 	return true, append(append(p1, p2...), k)
+}
+
+func onePair(h Hand) (bool, Hand) {
+	hasX, h, f := findXOfAKind(h, 2)
+	if !hasX {
+		return false, h
+	}
+	var k *card.Card
+	for i := 0; i < sizeHand-2; i++ {
+		h, k = popKicker(h)
+		f = append(f, k)
+	}
+	return true, f
 }
 
 // popKicker returns the highest ranked
