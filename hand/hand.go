@@ -160,9 +160,8 @@ func FormHand(h Hand) (*Value, error) {
 		return NewHandValue(OnePair, formedHand), nil
 	}
 
-	// TODO: High card
-
-	return v, fmt.Errorf("No valid hand !??! in %s", h)
+	formedHand = highCard(h)
+	return NewHandValue(HighCard, formedHand), nil
 }
 
 // Showdown determines whether h1 wins,
@@ -403,6 +402,18 @@ func onePair(h Hand) (bool, Hand) {
 	}
 	return true, f
 }
+
+func highCard(h Hand) Hand {
+	var k *card.Card
+	var f Hand
+	for i := 0; i < sizeHand; i++ {
+		h, k = popKicker(h)
+		f = append(f, k)
+	}
+	return f
+}
+
+// TODO: Seperate out detector funcs and utility funcs
 
 // popKicker returns the highest ranked
 // card in a given hand and returns the hand

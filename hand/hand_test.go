@@ -3,6 +3,7 @@ package hand
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/aultimus/gosouth/card"
@@ -425,4 +426,27 @@ func TestOnePair(t *testing.T) {
 	}
 	b, f = onePair(h)
 	a.False(b)
+}
+
+func TestHighCard(t *testing.T) {
+	a := assert.New(t)
+	h := Hand{
+		card.New(card.Nine, card.Spades),
+		card.New(card.King, card.Spades),
+		card.New(card.Ace, card.Hearts),
+		card.New(card.Four, card.Hearts),
+		card.New(card.Seven, card.Clubs),
+		card.New(card.Two, card.Clubs),
+		card.New(card.Jack, card.Diamonds),
+	}
+	// take a copy c
+	var c Hand
+	for _, v := range h {
+		c = append(c, v)
+	}
+	f := highCard(h)
+	sort.Sort(c)
+	sort.Sort(f)
+	c = c[len(c)-sizeHand:]
+	a.True(reflect.DeepEqual(c, f))
 }
