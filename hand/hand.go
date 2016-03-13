@@ -124,7 +124,12 @@ func FormHand(h Hand) (*Value, error) {
 	if hasFour {
 		return NewHandValue(FourOfAKind, formedHand), nil
 	}
+
 	// Full house
+	hasFullHouse, formedHand := fullHouse(h)
+	if hasFullHouse {
+		return NewHandValue(FullHouse, formedHand), nil
+	}
 
 	// Flush
 	hasFlush, formedHand := flush(h)
@@ -132,6 +137,7 @@ func FormHand(h Hand) (*Value, error) {
 		return NewHandValue(Flush, formedHand), nil
 	}
 
+	// Straight
 	if hasStraight {
 		return NewHandValue(Straight, formedHand), nil
 	}
@@ -294,8 +300,11 @@ func rankFreqMap(h Hand) map[card.RANK]int {
 	return rankMap
 }
 
-func xOfAKind(h Hand, x int) (bool, Hand) {
-	// TODO: sort cards and return sorted hand
+// findXOfAKind returns true if x cards of
+// the same rank are present in the given Hand
+// Returns a hand composed of the given cards and
+// the original hand with the given cards removed.
+func findXOfAKind(h Hand, x int) (bool, Hand, Hand) {
 	rankMap := rankFreqMap(h)
 	topRank := card.Nil
 	for r, c := range rankMap {
@@ -308,18 +317,25 @@ func xOfAKind(h Hand, x int) (bool, Hand) {
 
 	// should we handle 4 of a kind case when arg is 3?
 	if rankMap[topRank] != x {
-		return false, h
+		return false, h, h
 	}
 	var f Hand
-	var temp Hand
+	var reduced Hand
 	for _, c := range h {
 		if c.Rank == topRank {
 			f = append(f, c) // add to new hand
 		} else {
-			temp = append(temp, c)
+			reduced = append(reduced, c)
 		}
 	}
-	h = temp
+	return true, reduced, f
+}
+
+func xOfAKind(h Hand, x int) (bool, Hand) {
+	hasX, h, f := findXOfAKind(h, x)
+	if !hasX {
+		return false, f
+	}
 
 	// add kickers to new hand
 	numKickers := sizeHand - x
@@ -330,6 +346,19 @@ func xOfAKind(h Hand, x int) (bool, Hand) {
 	}
 
 	return true, f
+}
+
+func fullHouse(h Hand) (bool, Hand) {
+	hasX, h, f1 := findXOfAKind(h, 3)
+	if !hasX {
+		return false, h
+	}
+
+	hasX, _, f2 := findXOfAKind(h, 2)
+	if !hasX {
+		return false, h
+	}
+	return true, append(f1, f2...)
 }
 
 // popKicker returns the highest ranked

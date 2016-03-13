@@ -318,3 +318,47 @@ func TestPopKicker(t *testing.T) {
 		card.New(card.Queen, card.Clubs),
 	}))
 }
+
+func TestFullHouse(t *testing.T) {
+	a := assert.New(t)
+	h := Hand{
+		card.New(card.Queen, card.Spades),
+		card.New(card.King, card.Spades),
+		card.New(card.Queen, card.Hearts),
+		card.New(card.King, card.Hearts),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.Two, card.Clubs),
+		card.New(card.Ace, card.Diamonds),
+	}
+	b, f := fullHouse(h)
+	a.True(b)
+	a.Equal(card.Queen, f[0].Rank)
+	a.Equal(card.Queen, f[1].Rank)
+	a.Equal(card.Queen, f[2].Rank)
+	a.Equal(card.King, f[3].Rank)
+	a.Equal(card.King, f[4].Rank)
+
+	h = Hand{
+		card.New(card.Queen, card.Spades),
+		card.New(card.King, card.Spades),
+		card.New(card.Ace, card.Hearts),
+		card.New(card.King, card.Hearts),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.Two, card.Clubs),
+		card.New(card.Ace, card.Diamonds),
+	}
+	b, f = fullHouse(h)
+	a.False(b)
+
+	h = Hand{
+		card.New(card.Two, card.Spades),
+		card.New(card.Ace, card.Spades),
+		card.New(card.Ace, card.Hearts),
+		card.New(card.King, card.Hearts),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.Seven, card.Clubs),
+		card.New(card.Ace, card.Diamonds),
+	}
+	b, f = fullHouse(h)
+	a.False(b)
+}
