@@ -362,3 +362,35 @@ func TestFullHouse(t *testing.T) {
 	b, f = fullHouse(h)
 	a.False(b)
 }
+
+func TestTwoPair(t *testing.T) {
+	a := assert.New(t)
+	h := Hand{
+		card.New(card.Queen, card.Spades),
+		card.New(card.King, card.Spades),
+		card.New(card.Queen, card.Hearts),
+		card.New(card.King, card.Hearts),
+		card.New(card.Seven, card.Clubs),
+		card.New(card.Two, card.Clubs),
+		card.New(card.Ace, card.Diamonds),
+	}
+	b, f := twoPair(h)
+	a.True(b)
+	a.Equal(card.King, f[0].Rank)
+	a.Equal(card.King, f[1].Rank)
+	a.Equal(card.Queen, f[2].Rank)
+	a.Equal(card.Queen, f[3].Rank)
+	a.Equal(card.Ace, f[4].Rank)
+
+	h = Hand{
+		card.New(card.Nine, card.Spades),
+		card.New(card.King, card.Spades),
+		card.New(card.Ace, card.Hearts),
+		card.New(card.Two, card.Hearts),
+		card.New(card.Queen, card.Clubs),
+		card.New(card.Two, card.Clubs),
+		card.New(card.Seven, card.Diamonds),
+	}
+	b, f = twoPair(h)
+	a.False(b)
+}

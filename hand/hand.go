@@ -148,6 +148,12 @@ func FormHand(h Hand) (*Value, error) {
 		return NewHandValue(ThreeOfAKind, formedHand), nil
 	}
 
+	// Two Pair
+	hasTwoPair, formedHand := twoPair(h)
+	if hasTwoPair {
+		return NewHandValue(TwoPair, formedHand), nil
+	}
+
 	return v, nil
 }
 
@@ -348,6 +354,8 @@ func xOfAKind(h Hand, x int) (bool, Hand) {
 	return true, f
 }
 
+// TODO: code in fullHouse and twoPair
+// is duplicated somewhat
 func fullHouse(h Hand) (bool, Hand) {
 	hasX, h, f1 := findXOfAKind(h, 3)
 	if !hasX {
@@ -359,6 +367,20 @@ func fullHouse(h Hand) (bool, Hand) {
 		return false, h
 	}
 	return true, append(f1, f2...)
+}
+
+func twoPair(h Hand) (bool, Hand) {
+	hasX, h, p1 := findXOfAKind(h, 2)
+	if !hasX {
+		return false, h
+	}
+	hasX, h, p2 := findXOfAKind(h, 2)
+	if !hasX {
+		return false, h
+	}
+	_, k := popKicker(h)
+
+	return true, append(append(p1, p2...), k)
 }
 
 // popKicker returns the highest ranked
