@@ -1,9 +1,8 @@
 package headsup
 
 import (
-	"fmt"
-
 	"github.com/aultimus/gosouth/deck"
+	"github.com/aultimus/gosouth/hand"
 )
 
 // Result represents the probability breakdown
@@ -18,8 +17,8 @@ type Result struct {
 // calculates the probabilities of the results
 // by simulating every possible deal from the
 // resultant deck
-func Prob(h1, h2 deck.Deck) (*Result, error) {
-	var r *Result
+func Prob(h1, h2 hand.Hand) (*Result, error) {
+	r := &Result{}
 	var err error
 	c := make(chan deck.Deck)
 	d := deck.New()
@@ -30,14 +29,30 @@ func Prob(h1, h2 deck.Deck) (*Result, error) {
 		}
 	}
 	go deck.Combs(d, 5, c)
+	count := 0
 	for {
 		select {
-		case v := <-c:
-			// Todo: generate all possible deals
-			// and see whats the best hand that can be
-			// made using FormHand() and count showdown
-			// results out of Showdown()
-			fmt.Println(v)
+		case v, ok := <-c:
+			if !ok {
+				goto DONE
+			}
+			count++
+			p1Hand := hand.Hand(append(v, h1...))
+			p2Hand := hand.Hand(append(v, h2...))
+			outcome := hand.Showdown(p1Hand, p2Hand)
+			if outcome == hand.H1Win {
+				r.H1Win++
+			} else if outcome == hand.H2Win {
+				r.H2Win++
+			} else {
+				r.Tie++
+			}
 		}
 	}
+DONE:
+	total := r.H1Win + r.H2Win + r.Tie
+	r.H1Win = r.H1Win / total * 100
+	r.H2Win = r.H2Win / total * 100
+	r.Tie = r.Tie / total * 100
+	return r, nil
 }
