@@ -56,3 +56,6 @@ DONE:
 	r.Tie = r.Tie / total * 100
 	return r, nil
 }
+
+// TODO: Write a function that will generate a
+// table of all possible matchups
