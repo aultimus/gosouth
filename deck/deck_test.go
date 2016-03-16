@@ -1,6 +1,7 @@
 package deck
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -26,4 +27,28 @@ func TestRemove(t *testing.T) {
 	a.NoError(err)
 	d, err = Remove(d, card.New(card.Ace, card.Spades))
 	a.Error(err)
+}
+
+// Long running test
+func TestCombs(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping TestCombs as in short mode")
+	}
+	a := assert.New(t)
+	c := make(chan Deck)
+	d := New()
+	go Combs(d, 5, c)
+	total := 2598960 // choose 5 from 52
+	count := 0
+	for {
+		select {
+		case v, ok := <-c:
+			if !ok {
+				a.Equal(total, count)
+				return
+			}
+			count++
+			a.Equal(5, len(v), fmt.Sprintf("%s does not have 5 cards", v))
+		}
+	}
 }
