@@ -1,6 +1,8 @@
 package headsup
 
 import (
+	"fmt"
+
 	"github.com/aultimus/gosouth/deck"
 	"github.com/aultimus/gosouth/hand"
 )
@@ -11,6 +13,11 @@ type Result struct {
 	H1Win float64
 	H2Win float64
 	Tie   float64
+}
+
+func (r *Result) String() string {
+	return fmt.Sprintf("H1: %0.2f, H2: %0.2f, Draw: %0.2f",
+		r.H1Win, r.H2Win, r.Tie)
 }
 
 // Prob given two initial starting hands
