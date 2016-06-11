@@ -10,14 +10,25 @@ import (
 // Result represents the probability breakdown
 // of a hand unfolding
 type Result struct {
-	H1Win float64
-	H2Win float64
-	Tie   float64
+	Win []float64
+	Tie float64
+}
+
+// NewResult creates a new Result instance
+// for comparing numHands hands
+func NewResult(numHands int) *Result {
+	r := Result{}
+	r.Win = make([]float64, numHands, numHands)
+	return &r
 }
 
 func (r *Result) String() string {
-	return fmt.Sprintf("H1: %0.2f, H2: %0.2f, Draw: %0.2f",
-		r.H1Win, r.H2Win, r.Tie)
+	var s string
+	for i, w := range r.Win {
+		s = fmt.Sprintf("%s H%d: %0.2f", s, i, w)
+	}
+	s = fmt.Sprintf("%s Draw: %0.2f", s, r.Tie)
+	return s
 }
 
 // TODO: Add Prob(h hand.Hand) (*Result, error) func
@@ -28,7 +39,7 @@ func (r *Result) String() string {
 // by simulating every possible deal from the
 // resultant deck
 func Prob(h1, h2 hand.Hand) (*Result, error) {
-	r := &Result{}
+	r := NewResult(2)
 	var err error
 	c := make(chan deck.Deck)
 	d := deck.New()
@@ -44,16 +55,16 @@ func Prob(h1, h2 hand.Hand) (*Result, error) {
 		p2Hand := hand.Hand(append(v, h2...))
 		outcome := hand.Showdown(p1Hand, p2Hand)
 		if outcome == hand.H1Win {
-			r.H1Win++
+			r.Win[0]++
 		} else if outcome == hand.H2Win {
-			r.H2Win++
+			r.Win[1]++
 		} else {
 			r.Tie++
 		}
 	}
-	total := r.H1Win + r.H2Win + r.Tie
-	r.H1Win = r.H1Win / total * 100
-	r.H2Win = r.H2Win / total * 100
+	total := r.Win[0] + r.Win[1] + r.Tie
+	r.Win[0] = r.Win[0] / total * 100
+	r.Win[1] = r.Win[1] / total * 100
 	r.Tie = r.Tie / total * 100
 	return r, nil
 }
