@@ -90,6 +90,15 @@ func Remove(d Deck, c *card.Card) (Deck, error) {
 	return d, fmt.Errorf("card %s is not in deck", c)
 }
 
+// RemoveMultiple removes multiple cards from
+func RemoveMultiple(d Deck, c []*card.Card) (Deck, error) {
+	var err error
+	for _, v := range c {
+		d, err = Remove(d, v)
+	}
+	return d, err
+}
+
 // knuthShuffle is an implementation of the
 // Knuth/Fisher-Yates shuffle, in place, O(n)
 // https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle

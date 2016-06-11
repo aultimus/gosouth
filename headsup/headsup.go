@@ -32,11 +32,9 @@ func Prob(h1, h2 hand.Hand) (*Result, error) {
 	var err error
 	c := make(chan deck.Deck)
 	d := deck.New()
-	for _, v := range append(h1, h2...) {
-		d, err = deck.Remove(d, v)
-		if err != nil {
-			return r, err
-		}
+	d, err = deck.RemoveMultiple(d, append(h1, h2...))
+	if err != nil {
+		return r, err
 	}
 	go deck.Combs(d, 5, c)
 	count := 0
