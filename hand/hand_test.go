@@ -441,9 +441,8 @@ func TestHighCard(t *testing.T) {
 	}
 	// take a copy c
 	var c Hand
-	for _, v := range h {
-		c = append(c, v)
-	}
+	c = append(c, h...)
+
 	f := highCard(h)
 	sort.Sort(c)
 	sort.Sort(f)

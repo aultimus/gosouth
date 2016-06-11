@@ -40,26 +40,19 @@ func Prob(h1, h2 hand.Hand) (*Result, error) {
 	}
 	go deck.Combs(d, 5, c)
 	count := 0
-	for {
-		select {
-		case v, ok := <-c:
-			if !ok {
-				goto DONE
-			}
-			count++
-			p1Hand := hand.Hand(append(v, h1...))
-			p2Hand := hand.Hand(append(v, h2...))
-			outcome := hand.Showdown(p1Hand, p2Hand)
-			if outcome == hand.H1Win {
-				r.H1Win++
-			} else if outcome == hand.H2Win {
-				r.H2Win++
-			} else {
-				r.Tie++
-			}
+	for v := range c {
+		count++
+		p1Hand := hand.Hand(append(v, h1...))
+		p2Hand := hand.Hand(append(v, h2...))
+		outcome := hand.Showdown(p1Hand, p2Hand)
+		if outcome == hand.H1Win {
+			r.H1Win++
+		} else if outcome == hand.H2Win {
+			r.H2Win++
+		} else {
+			r.Tie++
 		}
 	}
-DONE:
 	total := r.H1Win + r.H2Win + r.Tie
 	r.H1Win = r.H1Win / total * 100
 	r.H2Win = r.H2Win / total * 100
