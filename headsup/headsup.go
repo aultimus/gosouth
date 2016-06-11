@@ -20,6 +20,9 @@ func (r *Result) String() string {
 		r.H1Win, r.H2Win, r.Tie)
 }
 
+// TODO: Add Prob(h hand.Hand) (*Result, error) func
+// that calculates pre-flop prob of a given hand being the best hand
+
 // Prob given two initial starting hands
 // calculates the probabilities of the results
 // by simulating every possible deal from the
