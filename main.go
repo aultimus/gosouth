@@ -19,5 +19,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("H1: %s\n", h1)
+	fmt.Printf("H2: %s\n", h2)
 	fmt.Println(r)
 }
