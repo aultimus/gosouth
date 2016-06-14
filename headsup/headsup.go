@@ -11,7 +11,6 @@ import (
 // of a hand unfolding
 type Result struct {
 	Win []float64
-	Tie float64
 }
 
 // NewResult creates a new Result instance
@@ -27,23 +26,24 @@ func (r *Result) String() string {
 	for i, w := range r.Win {
 		s = fmt.Sprintf("%s H%d: %0.2f", s, i, w)
 	}
-	s = fmt.Sprintf("%s Draw: %0.2f", s, r.Tie)
 	return s
 }
 
-// TODO: Add Prob(h hand.Hand) (*Result, error) func
-// that calculates pre-flop prob of a given hand being the best hand
-
-// Prob given two initial starting hands
-// calculates the probabilities of the results
-// by simulating every possible deal from the
-// resultant deck
-func Prob(h1, h2 hand.Hand) (*Result, error) {
-	r := NewResult(2)
+// Prob given n initial starting hands calculates the probabilities of the
+// results by simulating every possible deal from the resultant deck.
+// Likely faster to use a lookup table, this function can help generate one
+func Prob(hands ...hand.Hand) (*Result, error) {
+	r := NewResult(len(hands))
 	var err error
 	c := make(chan deck.Deck)
 	d := deck.New()
-	d, err = deck.RemoveMultiple(d, append(h1, h2...))
+
+	var usedCards hand.Hand
+	for _, h := range hands {
+		usedCards = append(usedCards, h...)
+	}
+
+	d, err = deck.RemoveMultiple(d, usedCards)
 	if err != nil {
 		return r, err
 	}
@@ -51,21 +51,26 @@ func Prob(h1, h2 hand.Hand) (*Result, error) {
 	count := 0
 	for v := range c {
 		count++
-		p1Hand := hand.Hand(append(v, h1...))
-		p2Hand := hand.Hand(append(v, h2...))
-		outcome := hand.Showdown(p1Hand, p2Hand)
-		if outcome == hand.H1Win {
-			r.Win[0]++
-		} else if outcome == hand.H2Win {
-			r.Win[1]++
-		} else {
-			r.Tie++
+		var pHands []hand.Hand
+		for _, h := range hands {
+			pHands = append(pHands, hand.Hand(append(v, h...)))
+		}
+
+		winners := hand.Showdown(pHands)
+		// draws will add up to over 100% but we are ok with that
+		for i := 0; i < len(winners); i++ {
+			r.Win[i]++
 		}
 	}
-	total := r.Win[0] + r.Win[1] + r.Tie
-	r.Win[0] = r.Win[0] / total * 100
-	r.Win[1] = r.Win[1] / total * 100
-	r.Tie = r.Tie / total * 100
+
+	// convert to percentages
+	var total float64
+	for _, v := range r.Win {
+		total += v
+	}
+	for i := 0; i < len(r.Win); i++ {
+		r.Win[i] = r.Win[i] / total * 100
+	}
 	return r, nil
 }
 
