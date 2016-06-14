@@ -29,11 +29,15 @@ func (r *Result) String() string {
 	return s
 }
 
-// Prob given n initial starting hands calculates the probabilities of the
-// results by simulating every possible deal from the resultant deck.
+// Prob given n (1 -> many) initial starting hands calculates the probabilities
+// of the results by simulating every possible deal from the resultant deck.
 // Likely faster to use a lookup table, this function can help generate one
 func Prob(hands ...hand.Hand) (*Result, error) {
-	r := NewResult(len(hands))
+	numResults := len(hands)
+	if len(hands) == 1 {
+		numResults = 2
+	}
+	r := NewResult(numResults)
 	var err error
 	c := make(chan deck.Deck)
 	d := deck.New()
@@ -47,12 +51,23 @@ func Prob(hands ...hand.Hand) (*Result, error) {
 	if err != nil {
 		return r, err
 	}
-	go deck.Combs(d, 5, c)
+	numCardsToDeal := 5
+	if len(hands) == 1 {
+		numCardsToDeal = 7
+	}
+	go deck.Combs(d, numCardsToDeal, c)
 	count := 0
+	var extraHands []hand.Hand
 	for v := range c {
 		count++
 		var pHands []hand.Hand
-		for _, h := range hands {
+		// generate an opposing hand out of the deal
+		if len(hands) == 1 {
+			extraHands = []hand.Hand{{v[0], v[1]}}
+			v = v[2:]
+		}
+
+		for _, h := range append(hands, extraHands...) {
 			pHands = append(pHands, hand.Hand(append(v, h...)))
 		}
 
