@@ -449,3 +449,51 @@ func TestHighCard(t *testing.T) {
 	c = c[len(c)-sizeHand:]
 	a.True(reflect.DeepEqual(c, f))
 }
+
+func TestShowdown(t *testing.T) {
+	a := assert.New(t)
+
+	commCards := []*card.Card{
+		card.New(card.Ace, card.Spades),
+		card.New(card.Ten, card.Clubs),
+		card.New(card.Seven, card.Spades),
+		card.New(card.Ace, card.Hearts),
+		card.New(card.Three, card.Spades),
+	}
+
+	p0 := append(Hand{
+		card.New(card.Nine, card.Spades),
+		card.New(card.Ace, card.Diamonds)},
+		commCards...)
+
+	p1 := append(Hand{
+		card.New(card.Two, card.Hearts),
+		card.New(card.Three, card.Hearts)},
+		commCards...)
+
+	hands := []Hand{p0, p1}
+
+	a.Equal([]int{0}, Showdown(hands))
+
+	p3 := append(Hand{
+		card.New(card.Ace, card.Clubs),
+		card.New(card.Three, card.Clubs)},
+		commCards...)
+	hands = append(hands, p3)
+
+	a.Equal([]int{2}, Showdown(hands))
+
+	p4 := append(Hand{
+		card.New(card.Ace, card.Clubs),
+		card.New(card.Three, card.Clubs)},
+		commCards...)
+
+	p5 := append(Hand{
+		card.New(card.Nine, card.Clubs),
+		card.New(card.Two, card.Diamonds)},
+		commCards...)
+
+	hands = []Hand{p3, p4, p5}
+	a.Equal([]int{0, 1}, Showdown(hands))
+
+}

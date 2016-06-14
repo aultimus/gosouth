@@ -164,9 +164,52 @@ func FormHand(h Hand) (*Value, error) {
 	return NewHandValue(HighCard, formedHand), nil
 }
 
-// Showdown determines whether h1 wins,
-// h2 wins or if they draw
-func Showdown(h1, h2 Hand) OUTCOME {
+// Showdown determines the winner of two to many hands
+// It multiplexes hand comparison (which is a binary operation)
+// over many hands. It returns a slice of the winning index/ drawing indexes
+func Showdown(hands []Hand) []int {
+	wins := make([]int, len(hands))
+	mostWins := 0
+
+	for i, h1 := range hands {
+		for j, h2 := range hands {
+			if i == j {
+				continue
+			}
+			o := showdown(h1, h2)
+			//fmt.Printf("%s vs %s, winner is %d\n", h1, h2, o)
+			if o == H1Win {
+				wins[i]++
+			}
+		}
+		// If we've beaten everyone then return early
+		if wins[i] == len(hands)-1 {
+			return []int{i}
+		}
+		// keep track of most wins
+		if wins[i] > mostWins {
+			mostWins = wins[i]
+		}
+	}
+	return findJointWinners(wins, mostWins)
+}
+
+// helper func
+// given a slice of ints a and int n,
+// return all i, where a[i] == n
+func findJointWinners(a []int, n int) []int {
+	var c []int
+	for i, v := range a {
+		if v == n {
+			c = append(c, i)
+		}
+	}
+	return c
+}
+
+// showdown performs a binary showdown of two hands, determining whether h1
+// wins, h2 wins or if they draw
+func showdown(h1, h2 Hand) OUTCOME {
 	v1, err := FormHand(h1)
 	if err != nil {
 		panic(err)
@@ -175,6 +218,7 @@ func Showdown(h1, h2 Hand) OUTCOME {
 	if err != nil {
 		panic(err)
 	}
+
 	if v1.Rank > v2.Rank {
 		return H1Win
 	} else if v2.Rank > v1.Rank {
