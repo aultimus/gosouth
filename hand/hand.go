@@ -484,3 +484,9 @@ func Remove(h Hand, c *card.Card) Hand {
 	}
 	return h
 }
+
+// ToHandType where a hand type is a string of format AKs AA 89o
+func ToHandType(h Hand) string {
+	// TODO
+	return "AA"
+}
