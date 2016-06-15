@@ -151,3 +151,9 @@ func makeCardMatrix() [NumSuit][NumRanks]*Card {
 	}
 	return matrix
 }
+
+// FromString converts a string into a card struct representation
+func FromString(s string) *Card {
+	// TODO
+	return New(Ace, Spades)
+}
