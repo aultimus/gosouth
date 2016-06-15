@@ -1,11 +1,17 @@
 package headsup
 
 import (
+	"encoding/csv"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/aultimus/gosouth/deck"
 	"github.com/aultimus/gosouth/hand"
 )
+
+// TODO: Rename this package 'prob'
 
 // Result represents the probability breakdown
 // of a hand unfolding
@@ -89,5 +95,52 @@ func Prob(hands ...hand.Hand) (*Result, error) {
 	return r, nil
 }
 
-// TODO: Write a function that will generate a
-// table of all possible matchups
+func rmWhitespace(s string) string {
+	return strings.Replace(s, " ", "", -1)
+}
+
+// build a map of hand type (there being 169 of such) rather than 2,652 possible
+// starting hands to percentage of winning.
+
+// HandProb represents the probability of a hand winning
+type HandProb struct {
+	Win float64
+	Tie float64
+}
+
+// HandProbMap returns a map of hand types (string of format of one of
+// {89o, 89s, 99}.
+// TODO: Add test coverage
+func HandProbMap() map[string]HandProb {
+	f, err := os.Open("hand_types.csv")
+	if err != nil {
+		panic(err.Error())
+	}
+	r := csv.NewReader(f)
+	r.Comment = '#'
+	lines, err := r.ReadAll()
+	if err != nil {
+		panic(err.Error())
+	}
+	f.Close()
+
+	// note: cannot use structs as map keys
+	handSuccessMap := make(map[string]HandProb)
+	for _, line := range lines {
+		handType := rmWhitespace(line[0])
+		v := rmWhitespace(line[1])
+		fmt.Println(handType)
+		fmt.Println(v)
+		winPer, err := strconv.ParseFloat(v, 32)
+		if err != nil {
+			panic(err)
+		}
+		tiePer, err := strconv.ParseFloat(rmWhitespace(line[2]), 32)
+		if err != nil {
+			panic(err)
+		}
+		h := HandProb{Win: winPer, Tie: tiePer}
+		handSuccessMap[handType] = h
+	}
+	return handSuccessMap
+}
